@@ -20,6 +20,7 @@ const onClick = () =>
 
   if (result.error) {
     output.value = result.error
+    depth.value = ''
   } else {
     output.value = result.path.join(' → ')
     depth.value = result.path.length
@@ -60,7 +61,8 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
     if (fd[i].targetAreaId == targetArea.areaId) {
       return {
         success: true, depth,
-        path: [fromArea.areaId, targetArea.areaId]
+        path: [{ areaId: fromArea.areaId, color: null },
+               { areaId: targetArea.targetAreaId, color: targetArea.color } ]
       }
     }
   }
@@ -70,7 +72,8 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
   let results = fd.map(dest => {
     let result = searchPath(dest.area, targetArea, filter, depth + 1)
     if (result.success) {
-      result.path.unshift(fromArea.areaId)
+      result.path[0].color = targetArea.color
+      result.path.unshift({ areaId: fromArea.areaId, color: null })
     }
     return result
   })
