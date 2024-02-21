@@ -1,10 +1,12 @@
 <script setup>
+import PathCard from './components/PathCard.vue'
 import graph from './content.js'
 import { ref } from 'vue'
 
 const startAreaNumber = ref(1)
 const destAreaNumber = ref(16)
 const output = ref('')
+const path = ref([])
 const depth = ref('')
 
 const onClick = () =>
@@ -20,9 +22,11 @@ const onClick = () =>
 
   if (result.error) {
     output.value = result.error
+    path.value = []
     depth.value = ''
   } else {
-    output.value = result.path.map(p => `${p.areaId} (${p.color}) `).join(' → ')
+    output.value = ''
+    path.value = result.path
     depth.value = result.path.length
   }
 
@@ -62,7 +66,7 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
       return {
         success: true, depth,
         path: [{ areaId: fromArea.areaId, color: null },
-               { areaId: targetArea.targetAreaId, color: targetArea.color } ]
+               { areaId: fd[i].targetAreaId, color: String(fd[i].color).toLowerCase() } ]
       }
     }
   }
@@ -72,7 +76,7 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
   let results = fd.map(dest => {
     let result = searchPath(dest.area, targetArea, filter, depth + 1)
     if (result.success) {
-      result.path[0].color = targetArea.color
+      result.path[0].color = String(dest.color).toLowerCase()
       result.path.unshift({ areaId: fromArea.areaId, color: null })
     }
     return result
@@ -101,7 +105,11 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
       <input type="text" v-model="destAreaNumber" />
     </label>
     <button @click="onClick">Search!</button>
-    <div>Path: {{ output }}</div>
+    <div>Output: {{ output }}</div>
+    <div>
+      <span>Path:</span>
+      <PathCard v-for="p in path" :key="p.areaId" :value="p"/>
+    </div>
     <div>Depth: {{ depth }}</div>
   </form>
 </template>
