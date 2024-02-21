@@ -22,7 +22,7 @@ const onClick = () =>
     output.value = result.error
     depth.value = ''
   } else {
-    output.value = result.path.join(' → ')
+    output.value = result.path.map(p => `${p.areaId} (${p.color}) `).join(' → ')
     depth.value = result.path.length
   }
 
