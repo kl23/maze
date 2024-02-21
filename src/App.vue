@@ -3,16 +3,26 @@ import PathCard from './components/PathCard.vue'
 import graph from './content.js'
 import { ref } from 'vue'
 
+import { permutator } from './permutator.js'
+
 const startAreaNumber = ref(1)
 const destAreaNumber = ref(16)
 const output = ref('')
 const path = ref([])
 const depth = ref('')
 
-const onClick = () =>
+
+const allDest_str = ref('2,9,12,14')
+
+const getArea = (tid) =>
 {
-  let fromArea = graph.filter(area => area.areaId == startAreaNumber.value)[0];
-  let targetArea = graph.filter(area => area.areaId == destAreaNumber.value)[0];
+  return graph.filter(area => area.areaId == tid)[0]
+}
+
+const onClickSingle = () =>
+{
+  let fromArea = getArea(startAreaNumber.value);
+  let targetArea = getArea(destAreaNumber.value);
   if (!targetArea) {
     output.value = "Invalid Area!"
     return false
@@ -32,6 +42,51 @@ const onClick = () =>
 
   // console.log('END', result)
 
+}
+
+const onClickRound = () =>
+{
+  let destIds = parseDestStr()
+  if (destIds.length <= 0)
+  {
+    output.value = 'Error: failed to parse detinations'
+    depth.value = ''
+    path.value = []
+    return false
+  }
+
+  let areas = destIds.map(destId => getArea(destId))
+
+  if (areas.length > 5) {
+    output.value = 'Cannot calc more than 4 destinations'
+    depth.value = ''
+    path.value = []
+    return false
+  }
+
+  let result = searchRoundTrip(areas)
+
+  if (result.error) {
+    output.value = result.error
+    path.value = []
+    depth.value = ''
+  } else {
+    output.value = ''
+    path.value = result.path
+    depth.value = result.path.length
+  }
+}
+
+const parseDestStr = () =>
+{
+  try
+  {
+    return allDest_str.value.split(',').map(x => parseInt(x.trim()))
+  }
+  catch
+  {
+    return []
+  }
 }
 
 const searchPath = (fromArea, targetArea, filter, depth) =>
@@ -92,26 +147,84 @@ const searchPath = (fromArea, targetArea, filter, depth) =>
 
 }
 
+const searchRoundTrip = (areas) =>
+{
+  let firstArea = getArea(1)
+  const routes = permutator(areas).map(route => [firstArea, ...route])
+
+  let results = routes.map(route =>
+  {
+    let routeResult = {
+      depth: 0,
+      path: []
+    }
+
+    for (let i = 1; i < route.length; i++)
+    {
+      let result = searchPath(route[i-1], route[i], [], 1)
+      routeResult.depth += result.depth
+      routeResult.path = [...routeResult.path, ...result.path.slice(1)]
+    }
+
+    routeResult.path.unshift(firstArea)
+    return routeResult
+  })
+
+  results.sort((a,b) => {
+    if (a.depth > b.depth) return  1
+    if (a.depth < b.depth) return -1
+    return 0
+  })
+
+  return results[0]
+}
+
 </script>
 
 <template>
-  <form @submit.prevent="">
-    <label>
-      <strong>Start Area#</strong>
-      <input type="text" v-model="startAreaNumber" />
-    </label>
-    <label>
-      <strong>Destination Area#</strong>
-      <input type="text" v-model="destAreaNumber" />
-    </label>
-    <button @click="onClick">Search!</button>
-    <div>Output: {{ output }}</div>
-    <div>
-      <span>Path:</span>
-      <PathCard v-for="p in path" :key="p.areaId" :value="p"/>
+  <div>
+    <div class="result">
+      <h3>Result</h3>
+      <div>Output: {{ output }}</div>
+      <div>
+        <span>Path:</span>
+        <PathCard v-for="p in path" :key="p.areaId" :value="p"/>
+      </div>
+      <div>Depth: {{ depth }}</div>
     </div>
-    <div>Depth: {{ depth }}</div>
-  </form>
+
+    <table>
+      <tr>
+        <th>Single Route</th>
+        <th>Round Trip</th>
+      </tr>
+      <tr>
+        <td>
+          <form @submit.prevent="">
+            <label>
+              <strong>Start Area#</strong>
+              <input type="text" v-model="startAreaNumber" />
+            </label>
+            <label>
+              <strong>Destination Area#</strong>
+              <input type="text" v-model="destAreaNumber" />
+            </label>
+            <button @click="onClickSingle">Search!</button>
+          </form>
+        </td>
+        <td>
+          
+          <form @submit.prevent="">
+            <label>
+              <strong>Destinations #</strong>
+              <input type="text" v-model="allDest_str" />
+            </label>
+            <button @click="onClickRound">Search!</button>
+          </form>
+        </td>
+      </tr>
+    </table>
+  </div>
 </template>
 
 <style scoped>
